@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+# Downloads zones from czds
+import requests
+import json
+import os
+import datetime
+import re
+
+config = {
+	'token':	None,
+	'directory':	'output/'
+}
+
+url = {
+	'base': 'https://czdap.icann.org',
+	'data':	'/user-zone-data-urls.json?token='
+}
+
+s = requests.Session()
+
+def sizeprefix(size):
+	prefix = {0: 'B', 1: 'kB', 2: 'MB', 3: 'GB'}
+	size = int(size)
+	multiplier = 0
+	while size > 1024:
+		size /= 1024
+		multiplier += 1
+	return '{:.1f} {}'.format(size, prefix[multiplier])
+
+def gettoken():
+	global config
+	tokenfile = open('config', 'r')
+	config['token'] = tokenfile.readline().strip()
+
+def makedirs(date):
+	os.makedirs('{}{}'.format(config['directory'], date), exist_ok=True)
+
+def getdataurl(s):
+	print('downloading {}{}'.format(url['base'], url['data'].split('?')[0]))
+	request = s.get('{}{}{}'.format(url['base'], url['data'], config['token']))
+	data = list(set(json.loads(request.text)))
+	return ['{}{}'.format(url['base'], elem) for elem in data]
+
+def parseheader(r):
+	ret = {}
+	ret['filename'] = re.findall('filename=(.+)', r.headers['content-disposition'])[0].strip('"')
+	# TODO: this doesn't work for xn--fuck-you-zones - isn't important tho
+	(ret['date'], ret['zone'], _) = ret['filename'].split('-', maxsplit=2)
+	ret['size'] = r.headers['content-length']
+	return ret
+
+def checkdownload(h):
+	try:
+		s = os.path.getsize('{}{}/{}'.format(config['directory'], h['date'], h['filename']))
+		if s == h['size']:
+			return True
+	except:
+		pass
+	return False
+
+def getdata(dl, s):
+	for elem in dl:
+		try:
+			request = s.head(elem)
+		except Exception as e:
+			print('SOMETHING HAPPENED: {}'.format(repr(e)))
+			continue
+		if request.status_code != 200:
+			continue
+		header = parseheader(request)
+		if checkdownload(header):
+			continue
+		print('downloading zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
+		makedirs(header['date'])
+		try:
+			request = s.get(elem)
+			with open('{}{}/{}'.format(config['directory'],	header['date'], header['filename']), 'wb') as f:
+				f.write(request.content)
+		except Exception as e:
+			print('SOMETHING HAPPENED: {}'.format(repr(e)))
+			continue
+
+gettoken()
+dl = getdataurl(s)
+getdata(dl, s)
