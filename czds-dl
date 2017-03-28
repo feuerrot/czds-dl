@@ -44,8 +44,9 @@ def getdataurl(s):
 def parseheader(r):
 	ret = {}
 	ret['filename'] = re.findall('filename=(.+)', r.headers['content-disposition'])[0].strip('"')
-	# TODO: this doesn't work for xn--fuck-you-zones - isn't important tho
-	(ret['date'], ret['zone'], _) = ret['filename'].split('-', maxsplit=2)
+	(ret['date'], ret['zone']) = re.findall('(\d{8})-([-a-z0-9]+)-zone-data.txt.gz', ret['filename'])[0]
+	if 'xn--' in ret['zone']:
+		ret['zone'] = ret['zone'].encode('utf-8').decode('idna')
 	ret['size'] = r.headers['content-length']
 	return ret
 
