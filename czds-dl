@@ -24,7 +24,7 @@ def sizeprefix(size):
 	while size > 1024:
 		size /= 1024
 		multiplier += 1
-	return '{:.1f} {}'.format(size, prefix[multiplier])
+	return '{:>6.1f} {}'.format(size, prefix[multiplier])
 
 def gettoken():
 	global config
@@ -69,11 +69,9 @@ def getdata(dl, s):
 			continue
 		header = parseheader(request)
 		if checkdownload(header):
-			# OnDisk
-			print('[OD] zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
+			print('[✓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
 			continue
-		# DownLoad
-		print('[DL] zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
+		print('[⇓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
 		makedirs(header['date'])
 		try:
 			request = s.get(elem)
