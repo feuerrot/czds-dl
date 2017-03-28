@@ -20,7 +20,6 @@ s = requests.Session()
 
 def sizeprefix(size):
 	prefix = {0: 'B', 1: 'kB', 2: 'MB', 3: 'GB'}
-	size = int(size)
 	multiplier = 0
 	while size > 1024:
 		size /= 1024
@@ -47,7 +46,7 @@ def parseheader(r):
 	(ret['date'], ret['zone']) = re.findall('(\d{8})-([-a-z0-9]+)-zone-data.txt.gz', ret['filename'])[0]
 	if 'xn--' in ret['zone']:
 		ret['zone'] = ret['zone'].encode('utf-8').decode('idna')
-	ret['size'] = r.headers['content-length']
+	ret['size'] = int(r.headers['content-length'])
 	return ret
 
 def checkdownload(h):
@@ -70,8 +69,11 @@ def getdata(dl, s):
 			continue
 		header = parseheader(request)
 		if checkdownload(header):
+			# OnDisk
+			print('[OD] zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
 			continue
-		print('downloading zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
+		# DownLoad
+		print('[DL] zone {} size {} from {}'.format(header['zone'], sizeprefix(header['size']), header['date']))
 		makedirs(header['date'])
 		try:
 			request = s.get(elem)
