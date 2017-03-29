@@ -74,9 +74,11 @@ def getdata(dl, s):
 		print('[⇓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
 		makedirs(header['date'])
 		try:
-			request = s.get(elem)
+			request = s.get(elem, stream=True)
 			with open('{}{}/{}'.format(config['directory'],	header['date'], header['filename']), 'wb') as f:
-				f.write(request.content)
+				for chunk in request.iter_content(chunk_size=None):
+					if chunk:
+						f.write(chunk)
 		except Exception as e:
 			print('SOMETHING HAPPENED: {}'.format(repr(e)))
 			continue
