@@ -18,6 +18,9 @@ url = {
 
 s = requests.Session()
 
+class DownloadNextException(Exception):
+	pass
+
 def sizeprefix(size):
 	prefix = {0: 'B', 1: 'kB', 2: 'MB', 3: 'GB'}
 	multiplier = 0
@@ -61,27 +64,25 @@ def checkdownload(h):
 def getdata(dl, s):
 	for elem in dl:
 		try:
-			request = s.head(elem)
-		except Exception as e:
-			print('SOMETHING HAPPENED: {}'.format(repr(e)))
-			continue
-		if request.status_code != 200:
-			continue
-		header = parseheader(request)
-		if checkdownload(header):
-			print('[✓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
-			continue
-		print('[⇓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
-		makedirs(header['date'])
-		try:
 			request = s.get(elem, stream=True)
+			if request.status_code != 200:
+				raise DownloadNextException("request status code != 200: {}".format(request.status_code))
+			header = parseheader(request)
+			if checkdownload(header):
+				print('[✓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
+				raise DownloadNextException("zone already downloaded")
+			print('[⇓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
+			makedirs(header['date'])
 			with open('{}{}/{}'.format(config['directory'],	header['date'], header['filename']), 'wb') as f:
 				for chunk in request.iter_content(chunk_size=None):
 					if chunk:
 						f.write(chunk)
+		except DownloadNextException:
+			pass
 		except Exception as e:
 			print('SOMETHING HAPPENED: {}'.format(repr(e)))
-			continue
+		finally:
+			request.close()
 
 gettoken()
 dl = getdataurl(s)
