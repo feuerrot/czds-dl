@@ -64,13 +64,16 @@ def checkdownload(h):
 def getdata(dl, s):
 	for elem in dl:
 		try:
-			request = s.get(elem, stream=True)
+			request = s.head(elem)
 			if request.status_code != 200:
 				raise DownloadNextException("request status code != 200: {}".format(request.status_code))
 			header = parseheader(request)
 			if checkdownload(header):
 				print('[✓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
 				raise DownloadNextException("zone already downloaded")
+			request = s.get(elem, stream=True)
+			if request.status_code != 200:
+				raise DownloadNextException("request status code != 200: {}".format(request.status_code))
 			print('[⇓] {} {} .{:<20}'.format(header['date'], sizeprefix(header['size']), header['zone']))
 			makedirs(header['date'])
 			with open('{}{}/{}'.format(config['directory'],	header['date'], header['filename']), 'wb') as f:
